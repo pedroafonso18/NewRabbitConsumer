@@ -2,6 +2,7 @@
 #define D_INSERT_H
 
 #include "Database.h"
+#include "InsertTypes.h"
 #include <memory>
 #include <string>
 
@@ -15,18 +16,18 @@ public:
     explicit Insert(std::string dbUrl)
         : ownedDb(std::make_unique<Database>(dbUrl)), db(ownedDb.get()) {}
 
-    void insertEnqueued();
-    void insertSent();
-    void insertDeliveredSafe();
-    void insertRead();
-    void insertFailed();
-    void insertUnmapped();
-    void insertTemplateError();
-    void insertErrorPayload();
-    void insertMessageLogs();
-    void insertGtm();
-    void insertIssue();
-    void insertBan();
+    void insertEnqueued(Enqueued &enqueued);
+    void insertSent(Sent &sent);
+    void insertDelivered(Delivered &delivered);
+    void insertRead(Read &read);
+    void insertFailed(Failed &failed);
+    void insertUnmapped(std::string &data);
+    void insertTemplateError(TemplateError &err);
+    void insertErrorPayload(std::string &payload);
+    void insertMessageLogs(MessageLog &log);
+    void insertGtm(GTM &gtm);
+    void insertIssue(std::string app_id);
+    void insertBan(std::string app_id);
 };
 
 #endif // D_INSERT_H

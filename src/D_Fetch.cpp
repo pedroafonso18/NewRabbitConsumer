@@ -15,7 +15,7 @@ bool Fetch::recordExists(std::string table, std::string id) {
 
         auto result = transaction.exec_params(query, id);
         return !result.empty();
-    } catch (std::exception& e) {
+    } catch (pqxx::sql_error& e) {
         transaction.abort();
         throw std::runtime_error("Database error: " + std::string(e.what()));
     }
