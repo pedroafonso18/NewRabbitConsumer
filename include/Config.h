@@ -1,6 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <memory>
 #include <string>
 #include "../lib/dotenv.h"
 
@@ -15,11 +16,10 @@ private:
         string DbUrlDisp;
     } Env;
 
-    Env* env;
+    std::unique_ptr<Env> env;
 public:
     Config();
-    ~Config();
-    Env* loadEnv();
+    std::unique_ptr<Env> loadEnv();
 };
 
 #endif

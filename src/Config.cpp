@@ -1,7 +1,7 @@
 #include "../include/Config.h"
 #include <filesystem>
 
-Config::Config() : env(new Env()) {
+Config::Config() : env(std::make_unique<Env>()) {
     std::string root_path = "../.env";
     if (std::filesystem::exists(".env")) {
         root_path = ".env";
@@ -12,16 +12,10 @@ Config::Config() : env(new Env()) {
     loadEnv();
 }
 
-Config::~Config() {
-    delete env;
-}
-
-
-Config::Env *Config::loadEnv() {
+std::unique_ptr<Config::Env> Config::loadEnv() {
     env->DbUrl = dotenv::getenv("DB_URL", "");
     env->DbUrlDisp = dotenv::getenv("DB_URL_DISP", "");
     env->DbUrlLogs = dotenv::getenv("DB_URL_LOGS", "");
     env->RabbitUrl = dotenv::getenv("RABBIT_URL", "");
-    return env;
+    return std::move(env);
 }
-
