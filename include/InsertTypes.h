@@ -68,6 +68,7 @@ typedef struct {
     std::string phone_number_id;
     int error_code;
     std::string error_details;
+    std::string error_message;
     std::string title;
     std::string gs_id;
     std::string meta_msg_id;

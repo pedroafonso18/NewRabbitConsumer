@@ -1,6 +1,8 @@
 #include "../include/D_Insert.h"
-
+#include <nlohmann/json.hpp>
 #include <iostream>
+#include <chrono>
+#include <ctime>
 
 void Insert::insertEnqueued(Enqueued &enqueued) {
     auto c = db->getConnection();
@@ -33,7 +35,7 @@ void Insert::insertSent(Sent &sent) {
         auto result = transaction.exec_params("INSERT INTO sent(id, display_phone_number, phone_number_id, conversation_expiration_timestamp, conversation_id, conversation_type, gs_id, meta_msg_id, pricing_billable, pricing_category, pricing_model, recipient_id, status, changes_id, gs_app_id, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)",
             sent.id, sent.display_phone_number, sent.phone_number_id, sent.conversation_expiration_timestamp, sent.conversation_id, sent.conversation_type, sent.gs_id, sent.meta_msg_id, sent.pricing_billable, sent.pricing_category, sent.pricing_model, sent.recipient_id, sent.status, sent.changes_id, sent.gs_app_id, sent.timestamp);
         if (!result.affected_rows() == 0) {
-            std::clog << "ERROR: error when inserting Enqueued.\n";
+            std::clog << "ERROR: error when inserting Sent.\n";
         }
     } catch (pqxx::sql_error& e) {
         transaction.abort();
@@ -47,5 +49,143 @@ void Insert::insertDelivered(Delivered &delivered) {
         std::clog << "ERROR: db connection is not open.\n";
         throw std::runtime_error("DB CONNECTION IS NOT ACTIVE");
     }
+    pqxx::work transaction(*c);
+    try {
+        auto result = transaction.exec_params("INSERT INTO delivered(id, display_phone_number, phone_number_id, conversation_id, conversation_type, gs_id, meta_msg_id, pricing_billable, pricing_category, pricing_model, recipient_id, status, changes_id, gs_app_id, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) ON CONFLICT (id) DO NOTHING", delivered.id, delivered.display_phone_number, delivered.phone_number_id, delivered.conversation_id, delivered.conversation_id, delivered.conversation_id, delivered.conversation_type, delivered.gs_id, delivered.meta_msg_id, delivered.pricing_billable, delivered.pricing_category, delivered.pricing_model, delivered.recipient_id, delivered.status, delivered.changes_id, delivered.gs_app_id, delivered.timestamp);
+        if (!result.affected_rows() == 0) {
+            std::clog << "ERROR: error when inserting Delivered.\n";
+        }
 
+    } catch (pqxx::sql_error& e) {
+        transaction.abort();
+        throw std::runtime_error("Database error: " + std::string(e.what()));
+    }
+}
+
+void Insert::insertRead(Read &read) {
+    auto c = db->getConnection();
+    if (!c->is_open()) {
+        std::clog << "ERROR: db connection is not open.\n";
+        throw std::runtime_error("DB CONNECTION IS NOT ACTIVE");
+    }
+    pqxx::work transaction(*c);
+    try {
+        auto result = transaction.exec_params("INSERT INTO read(id, display_phone_number, phone_number_id, gs_id, meta_msg_id, recipient_id, status, changes_id, gs_app_id, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT (id) DO NOTHING", read.id, read.display_phone_number, read.phone_number_id, read.gs_id, read.meta_msg_id, read.recipient_id, read.status, read.changes_id, read.status, read.changes_id, read.gs_app_id, read.timestamp);
+        if (!result.affected_rows() == 0) {
+            std::clog << "ERROR: error when inserting Read.\n";
+        }
+    } catch (pqxx::sql_error& e) {
+        transaction.abort();
+        throw std::runtime_error("Database error: " + std::string(e.what()));
+    }
+}
+
+void Insert::insertFailed(Failed &failed) {
+    auto c = db->getConnection();
+    if (!c->is_open()) {
+        std::clog << "ERROR: db connection is not open.\n";
+        throw std::runtime_error("DB CONNECTION IS NOT ACTIVE");
+    }
+    pqxx::work transaction(*c);
+    try {
+        auto result = transaction.exec_params("INSERT INTO failed(id, display_phone_number, phone_number_id, erro_code, erro_details, erro_message, title, gs_id, meta_msg_id, recipient_id, status, changes_id, gs_app_id, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)", failed.id, failed.display_phone_number, failed.phone_number_id, failed.error_code, failed.error_details, failed.error_message, failed.title, failed.gs_id, failed.meta_msg_id, failed.recipient_id, failed.recipient_id, failed.status, failed.changes_id, failed.gs_app_id, failed.timestamp);
+        if (!result.affected_rows() == 0) {
+            std::clog << "ERROR: error when inserting Failed.\n";
+        }
+    } catch (pqxx::sql_error& e) {
+        transaction.abort();
+        throw std::runtime_error("Database error: " + std::string(e.what()));
+    }
+}
+
+void Insert::insertUnmapped(std::string &data) {
+    auto c = db->getConnection();
+    if (!c->is_open()) {
+        std::clog << "ERROR: db connection is not open.\n";
+        throw std::runtime_error("DB CONNECTION IS NOT ACTIVE");
+    }
+    pqxx::work transaction(*c);
+    try {
+        auto result = transaction.exec_params("INSERT INTO unmapped(valor) VALUES ($1)", data);
+        if (!result.affected_rows() == 0) {
+            std::clog << "ERROR: error when inserting Unmapped.\n";
+        }
+    } catch (pqxx::sql_error& e) {
+        transaction.abort();
+        throw std::runtime_error("Database error: " + std::string(e.what()));
+    }
+}
+
+void Insert::insertTemplateError(TemplateError &err) {
+    auto c = db->getConnection();
+    if (!c->is_open()) {
+        std::clog << "ERROR: db connection is not open.\n";
+        throw std::runtime_error("DB CONNECTION IS NOT ACTIVE");
+    }
+    pqxx::work transaction(*c);
+    try {
+        auto result = transaction.exec_params("INSERT INTO template_errors(gs_id, recipient_id, error_code, error_title, status, timestamp, raw_json) VALUES ($1, $2, $3, $4, $5, $6, $7)", err.gs_id, err.recipient_id, err.error_code, err.error_title, err.status, err.timestamp, err.raw_json);
+        if (!result.affected_rows() == 0) {
+            std::clog << "ERROR: error when inserting TemplateError.\n";
+        }
+    } catch (pqxx::sql_error& e) {
+        transaction.abort();
+        throw std::runtime_error("Database error: " + std::string(e.what()));
+    }
+}
+
+void Insert::insertErrorPayload(std::string &payload) {
+    try {
+        nlohmann::json error_json = nlohmann::json::parse(payload);
+
+        if (error_json.contains("gs_id") && error_json["gs_id"].is_string() &&
+            error_json.contains("recipient_id") && error_json["recipient_id"].is_string() &&
+            error_json.contains("status") && error_json["status"].is_string() &&
+            error_json.contains("timestamp") && error_json["timestamp"].is_number()) {
+
+            std::string gs_id_str = error_json["gs_id"].get<std::string>();
+            std::string recipient_id = error_json["recipient_id"].get<std::string>();
+            std::string status = error_json["status"].get<std::string>();
+            int64_t timestamp_val = error_json["timestamp"].get<int64_t>();
+
+            int64_t timestamp_secs = timestamp_val / 1000;
+
+            time_t time_val = static_cast<time_t>(timestamp_secs);
+            char time_buf[30];
+            std::strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", std::gmtime(&time_val));
+            std::string timestamp_str(time_buf);
+
+            if (error_json.contains("errors") && error_json["errors"].is_array() && !error_json["errors"].empty()) {
+                const nlohmann::json& first_error = error_json["errors"][0];
+
+                int error_code = 0;
+                if (first_error.contains("code") && first_error["code"].is_number()) {
+                    error_code = first_error["code"].get<int>();
+                }
+
+                std::string error_title = "Unknown error";
+                if (first_error.contains("title") && first_error["title"].is_string()) {
+                    error_title = first_error["title"].get<std::string>();
+                }
+
+                TemplateError err;
+                err.gs_id = gs_id_str;
+                err.recipient_id = recipient_id;
+                err.error_code = error_code;
+                err.error_title = error_title;
+                err.status = status;
+                err.timestamp = timestamp_str;
+                err.raw_json = payload;
+
+                insertTemplateError(err);
+                return;
+            }
+        }
+    } catch (const nlohmann::json::exception& e) {
+        std::clog << "JSON parsing error: " << e.what() << "\n";
+    } catch (const std::exception& e) {
+        std::clog << "Error processing payload: " << e.what() << "\n";
+    }
+
+    insertUnmapped(payload);
 }
