@@ -11,4 +11,5 @@ add_executable(ConsumirRabbitCpp src/main.cpp
         include/D_Insert.h
         include/D_Fetch.h
         src/D_Fetch.cpp
-        src/D_Insert.cpp)
+        src/D_Insert.cpp
+        include/InsertTypes.h)
