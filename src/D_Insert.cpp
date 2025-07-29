@@ -1,8 +1,7 @@
 #include "../include/D_Insert.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
-#include <chrono>
-#include <ctime>
+#include "../include/Utils.h"
 
 void Insert::insertEnqueued(Enqueued &enqueued) {
     auto c = db->getConnection();
@@ -135,6 +134,11 @@ void Insert::insertTemplateError(TemplateError &err) {
 }
 
 void Insert::insertErrorPayload(std::string &payload) {
+    auto c = db->getConnection();
+    if (!c->is_open()) {
+        std::clog << "ERROR: db connection is not open.\n";
+        throw std::runtime_error("DB CONNECTION IS NOT ACTIVE");
+    }
     try {
         nlohmann::json error_json = nlohmann::json::parse(payload);
 
@@ -188,4 +192,93 @@ void Insert::insertErrorPayload(std::string &payload) {
     }
 
     insertUnmapped(payload);
+}
+
+void Insert::insertMessageLogs(MessageLog &log) {
+    std::clog << "STEAK: Attempting to insert message into logs database - WAMID: " << log.wamid << '\n';
+
+    auto c = db->getConnection();
+    if (!c->is_open()) {
+        std::clog << "ERROR: db connection is not open.\n";
+        throw std::runtime_error("DB CONNECTION IS NOT ACTIVE");
+    }
+    pqxx::work transaction(*c);
+
+    auto utc_timestamp = Utils::getTimestamp(log.msg_timestamp);
+
+    try {
+        transaction.exec("SET statement_timeout = '30s'");
+        transaction.exec("SET idle_in_transaction_session_timeout = '30s'");
+        auto result = transaction.exec_params("INSERT INTO logstrafegohuggy(wamid, contact_wa_id, msg_text, timestamp, type, display_phone_number, phone_number_id, changes_id, gs_app_id, ctwa_clid, app, version, phone, name, country_code, dial_code, headline, referral_body,source_type, source_id, source_url, media_type, video_url, thumbnail_url, tag, protocol_number) VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,$13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)", log.wamid, log.contact_wa_id, log.msg_text, utc_timestamp, log.msg_type, log.display_phone_number, log.phone_number_id, log.changes_id, log.gs_app_id, log.ctwa_clid, log.app, log.version, log.phone, log.name, log.country_code, log.dial_code, log.headline, log.referral_body, log.source_type, log.source_id, log.source_url, log.media_type, log.video_url, log.thumbnail_url, log.tag, log.protocol_number);
+
+        if (result.affected_rows() == 0) {
+            std::clog << "STEAK: SUCCESSFULLY INSERTED MESSAGE INTO THE LOGS DATABASE - WAMID: " << log.wamid << '\n';
+        } else {
+            std::clog << "STEAK: FAILED TO INSERT MESSAGE INTO THE LOGS DATABASE - WAMID: " << log.wamid << '\n';
+        }
+    } catch (pqxx::sql_error& e) {
+        transaction.abort();
+        throw std::runtime_error("Database error: " + std::string(e.what()));
+    }
+}
+
+
+void Insert::insertGtm(GTM &gtm) {
+    std::clog << "RICE: Attempting to insert message into gtm database - CTWA_CLID: " << gtm.ctwa_clid << '\n';
+
+    auto c = db->getConnection();
+    if (!c->is_open()) {
+        std::clog << "ERROR: db connection is not open.\n";
+        throw std::runtime_error("DB CONNECTION IS NOT ACTIVE");
+    }
+    pqxx::work transaction(*c);
+
+    try {
+        transaction.exec("SET statement_timeout = '30s'");
+        transaction.exec("SET idle_in_transaction_session_timeout = '30s'");
+        auto result = transaction.exec_params("INSERT INTO logs_gtm(phone, ctwa_clid, source_id, event_id) VALUES ($1, $2, $3, $4) ON CONFLICT (event_id) DO NOTHING", gtm.phone, gtm.ctwa_clid, gtm.source_id, gtm.event_id);
+        if (result.affected_rows() == 0) {
+            std::clog << "RICE: SUCCESFULLY INSERTED MESSAGE INTO THE GTM DATABASE - CTWA_CLID: " << gtm.ctwa_clid << '\n';
+        } else {
+            std::clog << "RICE: FAILED TO INSERT MESSAGE INTO THE GTM DATABASE - CTWA_CLID: " << gtm.ctwa_clid << '\n';
+        }
+    } catch (pqxx::sql_error& e) {
+        transaction.abort();
+        throw std::runtime_error("Database error: " + std::string(e.what()));
+    }
+}
+
+
+void Insert::insertIssue(std::string app_id) {
+    auto c = db->getConnection();
+    if (!c->is_open()) {
+        std::clog << "ERROR: db connection is not open.\n";
+        throw std::runtime_error("DB CONNECTION IS NOT ACTIVE");
+    }
+    pqxx::work transaction(*c);
+    try {
+        transaction.exec("SET statement_timeout = '30s'");
+        transaction.exec("SET idle_in_transaction_session_timeout = '30s'");
+        auto result = transaction.exec_params("UPDATE parametros SET issues = issues + 1, ultima_issue_dia = NOW() WHERE app_id = $1", app_id);
+    } catch (pqxx::sql_error& e) {
+        transaction.abort();
+        throw std::runtime_error("Database error: " + std::string(e.what()));
+    }
+}
+
+void Insert::insertBan(std::string app_id) {
+    auto c = db->getConnection();
+    if (!c->is_open()) {
+        std::clog << "ERROR: db connection is not open.\n";
+        throw std::runtime_error("DB CONNECTION IS NOT ACTIVE");
+    }
+    pqxx::work transaction(*c);
+    try {
+        transaction.exec("SET statement_timeout = '30s'");
+        transaction.exec("SET idle_in_transaction_session_timeout = '30s'");
+        auto result = transaction.exec_params("UPDATE parametros SET restriction = 'BANNED' WHERE app_id = $1", app_id);
+    } catch (pqxx::sql_error& e) {
+        transaction.abort();
+        throw std::runtime_error("Database error: " + std::string(e.what()));
+    }
 }
