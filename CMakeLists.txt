@@ -16,4 +16,5 @@ add_executable(ConsumirRabbitCpp src/main.cpp
         include/Utils.h
         src/Utils.cpp
         include/Rabbit.h
-        src/Rabbit.cpp)
+        src/Rabbit.cpp
+        include/Process.h)

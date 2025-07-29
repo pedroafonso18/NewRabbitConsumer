@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <thread>
 #include <chrono>
+#include <optional>
 
 Rabbit::Rabbit(const std::string& host, int port, const std::string& user,
                const std::string& pass, const std::string& vhost)
@@ -227,10 +228,10 @@ bool Rabbit::basicConsume(int channel, const std::string& queueName, const std::
     }
 }
 
-bool Rabbit::getMessage(int channel, std::string& message, int timeoutMs) {
+std::optional<std::string> Rabbit::getMessage(int channel, int timeoutMs) {
     if (!isConnected()) {
         std::cerr << "Not connected to RabbitMQ" << std::endl;
-        return false;
+        return std::nullopt;
     }
 
     struct timeval timeout;
@@ -243,20 +244,20 @@ bool Rabbit::getMessage(int channel, std::string& message, int timeoutMs) {
     amqp_rpc_reply_t res = amqp_consume_message(conn, &envelope, &timeout, 0);
 
     if (res.reply_type == AMQP_RESPONSE_NORMAL) {
-        message = std::string(static_cast<char*>(envelope.message.body.bytes),
-                             envelope.message.body.len);
+        std::string message(static_cast<char*>(envelope.message.body.bytes),
+                           envelope.message.body.len);
         amqp_destroy_envelope(&envelope);
-        return true;
+        return message;
     } else if (res.reply_type == AMQP_RESPONSE_LIBRARY_EXCEPTION &&
                res.library_error == AMQP_STATUS_TIMEOUT) {
-        return false;
+        return std::nullopt;
     } else {
         try {
             checkReply(res, "Consuming message");
         } catch (const std::exception& e) {
             std::cerr << "Error consuming message: " << e.what() << std::endl;
         }
-        return false;
+        return std::nullopt;
     }
 }
 
@@ -269,9 +270,9 @@ bool Rabbit::consumeMessages(int channel, const std::string& queueName,
 
     try {
         while (true) {
-            std::string message;
-            if (getMessage(channel, message, 100)) {
-                callback(message);
+            auto messageOpt = getMessage(channel, 100);
+            if (messageOpt) {
+                callback(*messageOpt);
             } else {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }

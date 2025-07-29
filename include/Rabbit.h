@@ -6,6 +6,7 @@
 #include <string>
 #include <memory>
 #include <functional>
+#include <optional>
 
 class Rabbit {
 private:
@@ -48,7 +49,7 @@ public:
 
     bool basicConsume(int channel, const std::string& queueName,
                      const std::string& consumerTag = "");
-    bool getMessage(int channel, std::string& message, int timeoutMs = 1000);
+    std::optional<std::string> getMessage(int channel, int timeoutMs = 1000);
 
     bool consumeMessages(int channel, const std::string& queueName,
                         std::function<void(const std::string&)> callback,
